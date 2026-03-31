@@ -650,16 +650,17 @@ class WIZProtcol {
 		this.lastBrightness = -1;
 	}
 
-	setPilot(r, g, b) {
+setPilot(r, g, b) {
     let brightness = device.Brightness;
     
-    // 1. Check if R, G, and B are balanced (Saturation check)
-    const isBalanced = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5);
+    // 1. Strict Balance Check: R, G, and B must be within 2 units of each other.
+    // If you have (255, 250, 255), this is technically "Pinkish," so we keep RGB.
+    // If you have (255, 255, 255), this is "Pure White," so we use the White LEDs.
+    const isBalanced = (Math.abs(r - g) <= 2 && Math.abs(g - b) <= 2 && Math.abs(r - b) <= 2);
 
-    // 2. Set a threshold. If R is below 150, we treat it as "Grey" and use RGB.
-    // If R is above 150, we treat it as "White" and use the dedicated LEDs.
-    const isWhite = isBalanced && (r > 150);
-    const isGrey  = isBalanced && (r <= 150 && r > 10);
+    // 2. Brightness Threshold: Only switch to dedicated White LEDs if it's bright.
+    // This prevents "Grey" (low-intensity balanced RGB) from triggering the White LEDs.
+    const isWhite = isBalanced && (r > 160); 
 
     if(this.lastR !== r || this.lastG !== g || this.lastB !== b || this.lastBrightness !== brightness) {
         this.lastR = r; 
@@ -672,23 +673,23 @@ class WIZProtcol {
             udp.send(this.ip, this.port, {"method":"setPilot","params":{"state": false}});
         } 
         else if (isWhite) {
-            // PURE WHITE: Use dedicated White LEDs (Maximum light quality)
+            // TRUE WHITE: Use dedicated White LEDs
             udp.send(this.ip, this.port, {
                 "method":"setPilot",
                 "params":{ "temp": 4200, "dimming": brightness }
             });
         } 
         else {
-            // GREY or COLORS: Use RGB LEDs
-            // This allows "Grey" to look like a dimmed version of the RGB mix,
-            // which preserves the "texture" of grey on your walls.
+            // RGB MODE: This handles actual Colors AND Grey
+            // Because 'isWhite' is now stricter, your Red, Green, and Blue 
+            // signals will bypass the 'if' and land here.
             udp.send(this.ip, this.port, {
                 "method":"setPilot",
                 "params":{ "r": r, "g": g, "b": b, "dimming": brightness }
-                });
-			}
-		}
-	}
+            });
+        }
+    }
+}
 }
 export function Image(){
 
