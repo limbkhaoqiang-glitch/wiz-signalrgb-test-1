@@ -337,48 +337,43 @@ class WIZProtcol {
 	}
 
 	setPilot(r, g, b) {
-		let brightness = device.Brightness;
-		
-		// 1. Detect if the color is "White" (R, G, and B are within 5 units of each other)
-		const isWhite = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5 && Math.abs(r - b) < 5);
+    let brightness = device.Brightness;
+    
+    // 1. Check if R, G, and B are balanced (Saturation check)
+    const isBalanced = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5);
 
-		// 2. Only send if something changed to save network bandwidth
-		if(this.lastR !== r || this.lastG !== g || this.lastB !== b || this.lastBrightness !== brightness) {
-			
-			this.lastR = r;
-			this.lastG = g;
-			this.lastB = b;
-			this.lastBrightness = brightness;
+    // 2. Set a threshold. If R is below 150, we treat it as "Grey" and use RGB.
+    // If R is above 150, we treat it as "White" and use the dedicated LEDs.
+    const isWhite = isBalanced && (r > 150);
+    const isGrey  = isBalanced && (r <= 150 && r > 10);
 
-			if (r === 0 && g === 0 && b === 0) {
-				// Turn off or dim to minimum
-				udp.send(this.ip, this.port, {"method":"setPilot","params":{"state": false}});
-			} 
-			else if (isWhite && r > 10) {
-				// 3. Use White LEDs for better accuracy and brightness
-				// "temp" sets the color temperature (3000 = Warm, 6500 = Cold)
-				udp.send(this.ip, this.port, {
-					"method":"setPilot",
-					"params":{
-						"temp": 6000, 
-						"dimming": brightness
-					}
-				});
-			} 
-			else {
-				// 4. Use Color LEDs for actual colors
-				udp.send(this.ip, this.port, {
-					"method":"setPilot",
-					"params":{
-						"r": r,
-						"g": g,
-						"b": b,
-						"dimming": brightness
-					}
-				});
-			}
-		}
-	}
+    if(this.lastR !== r || this.lastG !== g || this.lastB !== b || this.lastBrightness !== brightness) {
+        this.lastR = r; 
+        this.lastG = g; 
+        this.lastB = b; 
+        this.lastBrightness = brightness;
+
+        if (r === 0 && g === 0 && b === 0) {
+            // Off State
+            udp.send(this.ip, this.port, {"method":"setPilot","params":{"state": false}});
+        } 
+        else if (isWhite) {
+            // PURE WHITE: Use dedicated White LEDs (Maximum light quality)
+            udp.send(this.ip, this.port, {
+                "method":"setPilot",
+                "params":{ "temp": 4200, "dimming": brightness }
+            });
+        } 
+        else {
+            // GREY or COLORS: Use RGB LEDs
+            // This allows "Grey" to look like a dimmed version of the RGB mix,
+            // which preserves the "texture" of grey on your walls.
+            udp.send(this.ip, this.port, {
+                "method":"setPilot",
+                "params":{ "r": r, "g": g, "b": b, "dimming": brightness }
+            });
+        }
+    }
 }
 
 export function Image(){
