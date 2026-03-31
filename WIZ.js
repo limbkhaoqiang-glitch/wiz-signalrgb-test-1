@@ -326,7 +326,6 @@ class WIZDevice{
 
 
 class WIZProtcol {
-
 	constructor(ip, port){
 		this.ip = ip;
 		this.port = port;
@@ -337,43 +336,29 @@ class WIZProtcol {
 	}
 
 	setPilot(r, g, b) {
-    let brightness = device.Brightness;
-    
-    // 1. Check if R, G, and B are balanced (Saturation check)
-    const isBalanced = (Math.abs(r - g) < 5 && Math.abs(g - b) < 5);
+		let brightness = device.Brightness;
+		
+		// Logic to differentiate Grey vs Pure White
+		const isBalanced = (Math.abs(r - g) <= 2 && Math.abs(g - b) <= 2);
+		const isHighIntensity = (r > 165); 
 
-    // 2. Set a threshold. If R is below 150, we treat it as "Grey" and use RGB.
-    // If R is above 150, we treat it as "White" and use the dedicated LEDs.
-    const isWhite = isBalanced && (r > 150);
-    const isGrey  = isBalanced && (r <= 150 && r > 10);
+		if(this.lastR !== r || this.lastG !== g || this.lastB !== b || this.lastBrightness !== brightness) {
+			this.lastR = r; this.lastG = g; this.lastB = b; this.lastBrightness = brightness;
 
-    if(this.lastR !== r || this.lastG !== g || this.lastB !== b || this.lastBrightness !== brightness) {
-        this.lastR = r; 
-        this.lastG = g; 
-        this.lastB = b; 
-        this.lastBrightness = brightness;
-
-        if (r === 0 && g === 0 && b === 0) {
-            // Off State
-            udp.send(this.ip, this.port, {"method":"setPilot","params":{"state": false}});
-        } 
-        else if (isWhite) {
-            // PURE WHITE: Use dedicated White LEDs (Maximum light quality)
-            udp.send(this.ip, this.port, {
-                "method":"setPilot",
-                "params":{ "temp": 6000, "dimming": brightness }
-            });
-        } 
-        else {
-            // GREY or COLORS: Use RGB LEDs
-            // This allows "Grey" to look like a dimmed version of the RGB mix,
-            // which preserves the "texture" of grey on your walls.
-            udp.send(this.ip, this.port, {
-                "method":"setPilot",
-                "params":{ "r": r, "g": g, "b": b, "dimming": brightness }
-            });
-        }
-    }
+			if (r === 0 && g === 0 && b === 0) {
+				// Off state
+				device.write(JSON.stringify({"method":"setPilot","params":{"state": false}}), this.ip, this.port);
+			} 
+			else if (isBalanced && isHighIntensity) {
+				// TRUE WHITE Mode (Dedicated LEDs)
+				device.write(JSON.stringify({"method":"setPilot","params":{"temp": 5000, "dimming": brightness}}), this.ip, this.port);
+			} 
+			else {
+				// RGB Mode (Colors and Grey)
+				device.write(JSON.stringify({"method":"setPilot","params":{"r": r, "g": g, "b": b, "dimming": brightness}}), this.ip, this.port);
+			}
+		}
+	}
 }
 
 export function Image(){
