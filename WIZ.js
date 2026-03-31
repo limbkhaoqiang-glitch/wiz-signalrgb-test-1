@@ -360,7 +360,7 @@ class WIZProtcol {
 				udp.send(this.ip, this.port, {
 					"method":"setPilot",
 					"params":{
-						"temp": 4500, 
+						"temp": 6000, 
 						"dimming": brightness
 					}
 				});
