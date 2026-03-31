@@ -361,7 +361,7 @@ class WIZProtcol {
             // PURE WHITE: Use dedicated White LEDs (Maximum light quality)
             udp.send(this.ip, this.port, {
                 "method":"setPilot",
-                "params":{ "temp": 4200, "dimming": brightness }
+                "params":{ "temp": 6000, "dimming": brightness }
             });
         } 
         else {
