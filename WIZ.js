@@ -676,7 +676,7 @@ setPilot(r, g, b) {
             // TRUE WHITE: Use dedicated White LEDs
             udp.send(this.ip, this.port, {
                 "method":"setPilot",
-                "params":{ "temp": 4200, "dimming": brightness }
+                "params":{ "temp": 6500, "dimming": brightness }
             });
         } 
         else {
